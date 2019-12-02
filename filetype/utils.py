@@ -50,23 +50,31 @@ def get_bytes(obj):
         TypeError: if obj is not a supported type.
     """
     try:
-        obj = obj.read(_NUM_SIGNATURE_BYTES)
+        first_bytes = obj.read(_NUM_SIGNATURE_BYTES)
     except AttributeError:
-        # duck-typing as readable failed - we'll try the other options
-        pass
+        # duck-typing as readable failed, means no need to read 
+        # we'll try to directly access the bytes
+        first_bytes = obj
+    else:
+        # return read pointer to initial so buffered reader object 
+        # can be re-read on caller side
+        obj.seek(0)
 
-    kind = type(obj)
+    kind = type(first_bytes)
 
     if kind is bytearray:
-        return signature(obj)
+        return signature(first_bytes)
 
     if kind is str:
-        return get_signature_bytes(obj)
+        return get_signature_bytes(first_bytes)
 
     if kind is bytes:
-        return signature(obj)
+        return signature(first_bytes)
 
     if kind is memoryview:
-        return signature(obj).tolist()
+        # convert memoryview object to list to be checked later 
+        # altough actually without converting it's value can be 
+        # directly accessed just like a list
+        return signature(first_bytes).tolist()
 
     raise TypeError('Unsupported type as file input: %s' % kind)
